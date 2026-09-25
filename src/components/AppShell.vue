@@ -30,6 +30,7 @@
       </header>
       <component :is="currentView" />
     </main>
+    <AchievementToast />
   </div>
 </template>
 
@@ -37,6 +38,7 @@
 import { ref, computed } from 'vue'
 import { useStore, refresh, controllersApi } from '../data/store.js'
 import IconChart from './IconChart.vue'
+import AchievementToast from './AchievementToast.vue'
 import DashboardView from '../views/DashboardView.vue'
 import AccountsView from '../views/AccountsView.vue'
 import TransactionsView from '../views/TransactionsView.vue'
@@ -69,7 +71,7 @@ const VIEWS = {
 }
 
 export default {
-  components: { IconChart, ...VIEWS },
+  components: { IconChart, AchievementToast, ...VIEWS },
   setup() {
     const store = useStore()
     const tab = ref('dashboard')

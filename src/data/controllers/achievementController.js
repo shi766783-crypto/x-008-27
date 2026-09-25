@@ -1,6 +1,7 @@
 import { storage } from '../../core/storage.js'
 import { STORAGE_KEYS, CHALLENGE_STREAKS } from '../../core/constants.js'
 import { todayStr, daysBetween } from '../../core/utils.js'
+import { enqueueAchievementToasts } from '../achievementToasts.js'
 import { loadTransactions } from './transactionController.js'
 import { loadBudgets } from './budgetController.js'
 import { loadGoals } from './savingsGoalController.js'
@@ -34,9 +35,11 @@ export function saveAchievements(list) {
 export function awardAchievement(id) {
   const meta = ACHIEVEMENTS.find((a) => a.id === id)
   const list = loadAchievements()
-  if (!meta || list.some((a) => a.id === id)) return
-  list.push({ ...meta, earnedAt: Date.now() })
+  if (!meta || list.some((a) => a.id === id)) return null
+  const earned = { ...meta, earnedAt: Date.now() }
+  list.push(earned)
   saveAchievements(list)
+  return earned
 }
 
 export function computeCurrentStreak() {
@@ -66,28 +69,38 @@ export function updateAchievements() {
   const month = now.slice(0, 7)
   const lastMonth = now.slice(0, 4) + '-' + String(Number(now.slice(5, 7)) - 1).padStart(2, '0')
 
-  if (loadTransactions().length > 0) awardAchievement('first_record')
-  if (streak >= 7) awardAchievement('streak_7')
-  if (streak >= 30) awardAchievement('streak_30')
-  if (largestExpense() >= 1000) awardAchievement('large_expense_guard')
+  const newlyEarned = []
+  const tryAward = (id) => {
+    const earned = awardAchievement(id)
+    if (earned) newlyEarned.push(earned)
+  }
+
+  if (loadTransactions().length > 0) tryAward('first_record')
+  if (streak >= 7) tryAward('streak_7')
+  if (streak >= 30) tryAward('streak_30')
+  if (largestExpense() >= 1000) tryAward('large_expense_guard')
 
   const views = budgetView(month)
-  if (views.length && views.every((v) => v.percent <= 100)) awardAchievement('budget_master')
+  if (views.length && views.every((v) => v.percent <= 100)) tryAward('budget_master')
 
   const overspent = (m) => budgetView(m).some((v) => v.percent > 100)
   const three = [now.slice(0, 4) + '-' + String(Number(now.slice(5, 7)) - 2).padStart(2, '0'), lastMonth, month]
-  if (three.every((m) => loadBudgets().some((b) => b.month === m) && !overspent(m))) awardAchievement('zero_overspend')
+  if (three.every((m) => loadBudgets().some((b) => b.month === m) && !overspent(m))) tryAward('zero_overspend')
 
   const goals = loadGoals()
-  if (goals.some((g) => g.targetAmount && g.savedAmount / g.targetAmount >= 0.5)) awardAchievement('saving_hero')
-  if (goals.some((g) => g.targetAmount && g.savedAmount / g.targetAmount >= 1)) awardAchievement('saving_complete')
+  if (goals.some((g) => g.targetAmount && g.savedAmount / g.targetAmount >= 0.5)) tryAward('saving_hero')
+  if (goals.some((g) => g.targetAmount && g.savedAmount / g.targetAmount >= 1)) tryAward('saving_complete')
 
   const { income, expense } = incomeAndExpense(month)
   const rate = income > 0 ? (income - expense) / income : 0
-  if (rate >= 0.2) awardAchievement('savings_rate_20')
-  if (rate >= 0.5) awardAchievement('savings_rate_50')
+  if (rate >= 0.2) tryAward('savings_rate_20')
+  if (rate >= 0.5) tryAward('savings_rate_50')
 
-  if (distinctRecordedMonths() >= 6) awardAchievement('six_month_consistent')
+  if (distinctRecordedMonths() >= 6) tryAward('six_month_consistent')
   const yearOk = daysBetween(`${now.slice(0, 4)}-01-01`, now) >= 365 && goals.some((g) => g.targetAmount && g.savedAmount / g.targetAmount >= 1)
-  if (yearOk) awardAchievement('dream_chaser')
+  if (yearOk) tryAward('dream_chaser')
+
+  // 本次新解锁的徽章统一入队，由全局提示组件按顺序逐个弹出
+  if (newlyEarned.length) enqueueAchievementToasts(newlyEarned)
+  return newlyEarned
 }
