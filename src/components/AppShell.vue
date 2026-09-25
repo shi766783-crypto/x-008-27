@@ -30,13 +30,17 @@
       </header>
       <component :is="currentView" />
     </main>
+
+    <AchievementToast />
   </div>
 </template>
 
 <script>
 import { ref, computed } from 'vue'
 import { useStore, refresh, controllersApi } from '../data/store.js'
+import { checkAchievements, clearToasts } from '../core/toast.js'
 import IconChart from './IconChart.vue'
+import AchievementToast from './AchievementToast.vue'
 import DashboardView from '../views/DashboardView.vue'
 import AccountsView from '../views/AccountsView.vue'
 import TransactionsView from '../views/TransactionsView.vue'
@@ -69,15 +73,14 @@ const VIEWS = {
 }
 
 export default {
-  components: { IconChart, ...VIEWS },
+  components: { IconChart, AchievementToast, ...VIEWS },
   setup() {
     const store = useStore()
     const tab = ref('dashboard')
     const sidebarOpen = ref(false)
 
     refresh()
-    controllersApi.achievement.updateAchievements()
-    refresh()
+    checkAchievements()
 
     const currentView = computed(() => VIEWS[tab.value])
     const currentLabel = computed(() => NAV.find((n) => n.key === tab.value)?.label || '')
@@ -89,7 +92,9 @@ export default {
       if (!confirm('确认清除全部本地数据并重置为演示数据？')) return
       localStorage.clear()
       controllersApi.seed.seedDemoData()
+      clearToasts()
       refresh()
+      checkAchievements()
     }
     return { store, tab, sidebarOpen, NAV, currentView, currentLabel, go, resetAll }
   }

@@ -77,6 +77,7 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { useStore, refreshKeys, controllersApi } from '../data/store.js'
+import { checkAchievements } from '../core/toast.js'
 import { money } from '../core/utils.js'
 import ProgressRing from '../components/ProgressRing.vue'
 import Modal from '../components/Modal.vue'
@@ -116,8 +117,7 @@ const submit = () => {
   goalApi.addGoal(form)
   refreshKeys('goals')
   modalOpen.value = false
-  controllersApi.achievement.updateAchievements()
-  refreshKeys('achievements')
+  checkAchievements()
 }
 
 const addSaving = (g) => {
@@ -125,8 +125,7 @@ const addSaving = (g) => {
   if (!amount || amount <= 0) return
   goalApi.addGoalSaving(g.id, amount)
   refreshKeys('goals')
-  controllersApi.achievement.updateAchievements()
-  refreshKeys('achievements')
+  checkAchievements()
 }
 
 const remove = (g) => {

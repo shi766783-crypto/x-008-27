@@ -80,6 +80,7 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { useStore, refreshKeys, controllersApi } from '../data/store.js'
+import { checkAchievements } from '../core/toast.js'
 import { money } from '../core/utils.js'
 import { EXPENSE_CATEGORIES, BUDGET_WARN_RATIO } from '../core/constants.js'
 import Modal from '../components/Modal.vue'
@@ -118,6 +119,7 @@ const applySetup = () => {
   budgetApi.upsertBudget(setup.category, currentMonth, setup.limit)
   refreshKeys('budgets')
   setup.limit = ''
+  checkAchievements()
 }
 const quickEdit = (b) => {
   editing.value = b
@@ -129,6 +131,7 @@ const saveEdit = () => {
   budgetApi.upsertBudget(editing.value.category, currentMonth, editLimit.value)
   refreshKeys('budgets')
   modalOpen.value = false
+  checkAchievements()
 }
 </script>
 

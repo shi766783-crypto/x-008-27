@@ -114,6 +114,7 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { useStore, refreshKeys, controllersApi } from '../data/store.js'
+import { checkAchievements } from '../core/toast.js'
 import { money, todayStr } from '../core/utils.js'
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES, TRANSACTION_TYPES } from '../core/constants.js'
 import Modal from '../components/Modal.vue'
@@ -179,15 +180,13 @@ const submit = () => {
   txApi.addTransaction(form)
   refreshKeys('transactions', 'accounts')
   modalOpen.value = false
-  controllersApi.achievement.updateAchievements()
-  refreshKeys('achievements', 'points')
+  checkAchievements()
 }
 
 const remove = (t) => {
   if (txApi.removeTransaction(t.id)) {
     refreshKeys('transactions', 'accounts')
-    controllersApi.achievement.updateAchievements()
-    refreshKeys('achievements', 'points')
+    checkAchievements()
   }
 }
 </script>

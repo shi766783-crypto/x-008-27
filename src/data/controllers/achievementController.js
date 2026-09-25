@@ -34,9 +34,11 @@ export function saveAchievements(list) {
 export function awardAchievement(id) {
   const meta = ACHIEVEMENTS.find((a) => a.id === id)
   const list = loadAchievements()
-  if (!meta || list.some((a) => a.id === id)) return
-  list.push({ ...meta, earnedAt: Date.now() })
+  if (!meta || list.some((a) => a.id === id)) return null
+  const earned = { ...meta, earnedAt: Date.now() }
+  list.push(earned)
   saveAchievements(list)
+  return earned
 }
 
 export function computeCurrentStreak() {
@@ -60,34 +62,42 @@ export function largestExpense() {
 }
 
 export function updateAchievements() {
+  const earned = []
+  const award = (id) => {
+    const item = awardAchievement(id)
+    if (item) earned.push(item)
+  }
+
   const now = todayStr()
   const days = new Set(loadTransactions().map((t) => t.date))
   const streak = computeCurrentStreak()
   const month = now.slice(0, 7)
   const lastMonth = now.slice(0, 4) + '-' + String(Number(now.slice(5, 7)) - 1).padStart(2, '0')
 
-  if (loadTransactions().length > 0) awardAchievement('first_record')
-  if (streak >= 7) awardAchievement('streak_7')
-  if (streak >= 30) awardAchievement('streak_30')
-  if (largestExpense() >= 1000) awardAchievement('large_expense_guard')
+  if (loadTransactions().length > 0) award('first_record')
+  if (streak >= 7) award('streak_7')
+  if (streak >= 30) award('streak_30')
+  if (largestExpense() >= 1000) award('large_expense_guard')
 
   const views = budgetView(month)
-  if (views.length && views.every((v) => v.percent <= 100)) awardAchievement('budget_master')
+  if (views.length && views.every((v) => v.percent <= 100)) award('budget_master')
 
   const overspent = (m) => budgetView(m).some((v) => v.percent > 100)
   const three = [now.slice(0, 4) + '-' + String(Number(now.slice(5, 7)) - 2).padStart(2, '0'), lastMonth, month]
-  if (three.every((m) => loadBudgets().some((b) => b.month === m) && !overspent(m))) awardAchievement('zero_overspend')
+  if (three.every((m) => loadBudgets().some((b) => b.month === m) && !overspent(m))) award('zero_overspend')
 
   const goals = loadGoals()
-  if (goals.some((g) => g.targetAmount && g.savedAmount / g.targetAmount >= 0.5)) awardAchievement('saving_hero')
-  if (goals.some((g) => g.targetAmount && g.savedAmount / g.targetAmount >= 1)) awardAchievement('saving_complete')
+  if (goals.some((g) => g.targetAmount && g.savedAmount / g.targetAmount >= 0.5)) award('saving_hero')
+  if (goals.some((g) => g.targetAmount && g.savedAmount / g.targetAmount >= 1)) award('saving_complete')
 
   const { income, expense } = incomeAndExpense(month)
   const rate = income > 0 ? (income - expense) / income : 0
-  if (rate >= 0.2) awardAchievement('savings_rate_20')
-  if (rate >= 0.5) awardAchievement('savings_rate_50')
+  if (rate >= 0.2) award('savings_rate_20')
+  if (rate >= 0.5) award('savings_rate_50')
 
-  if (distinctRecordedMonths() >= 6) awardAchievement('six_month_consistent')
+  if (distinctRecordedMonths() >= 6) award('six_month_consistent')
   const yearOk = daysBetween(`${now.slice(0, 4)}-01-01`, now) >= 365 && goals.some((g) => g.targetAmount && g.savedAmount / g.targetAmount >= 1)
-  if (yearOk) awardAchievement('dream_chaser')
+  if (yearOk) award('dream_chaser')
+
+  return earned
 }
